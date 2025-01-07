@@ -86,7 +86,7 @@ class Predictor(BasePredictor):
         thread.join()
 
 
-
+predictor = Predictor()
 
 
 
