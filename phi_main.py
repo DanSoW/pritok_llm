@@ -7,6 +7,7 @@ import subprocess
 from threading import Thread
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation import TextIteratorStreamer
+from load_prompt import get_prompt
 
 MODEL_NAME = "microsoft/Phi-3-mini-4k-instruct"
 MODEL_CACHE = "/home/phi_model"  # "model-cache"
@@ -87,7 +88,7 @@ class Predictor(BasePredictor):
 
 
 predictor = Predictor()
-
+print(get_prompt())
 
 
 
