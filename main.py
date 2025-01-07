@@ -3,6 +3,7 @@ import torch
 import nvmem
 import gc
 import sys
+import time
 
 torch.cuda.empty_cache()
 
@@ -10,35 +11,51 @@ nvmem.printInfoCUDA()
 nvmem.printMemoryUsed()
 
 #model_name = "microsoft/Phi-3-mini-4k-instruct"
-model_name = "ai-forever/rugpt3small_based_on_gpt2"
-#model_name = "Qwen/Qwen2.5-Coder-3B"
+#model_name = "ai-forever/rugpt3small_based_on_gpt2"
+model_name = "Qwen/Qwen2.5-Coder-3B"
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print("Device: ", device)
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(model_name).cuda()
+model = AutoModelForCausalLM.from_pretrained(model_name, device_map=device).eval()
 
 nvmem.printMemoryUsed()
 
-#sys.exit()
+prompt = "Напиши реализацию прямого обхода двусвязного списка на C++"
+messages = [
+    {"role": "user", "content": prompt}
+]
 
-input_text = "Как твои дела?"
-model_inputs = tokenizer.encode(input_text, return_tensors="pt")
-model_inputs = model_inputs.cuda()
+text = tokenizer.apply_chat_template(
+        messages, 
+        tokenize=False, 
+        add_generation_prompt=True
+)
 
-#torch.cuda.empty_cache()
-#gc.collect()
+model_inputs = tokenizer([text], return_tensors="pt").to(device)
 
 nvmem.printMemoryUsed()
 
+start_time = time.time()
+generated_ids = model.generate(
+        model_inputs.input_ids,
+        max_new_tokens=2048
+)
+end_time = time.time()
 
-model.generation_config.pad_token_id = tokenizer.pad_token_id
-out = model.generate(model_inputs, max_new_tokens=2048,  max_length=1024, do_sample=True)[0]
+print("LEN RESPONSE: ", len(generated_ids))
 
-generated_text = list(map(tokenizer.decode, out))[0]
-#result = str(generated_text).removeprefix(input_text)
+elapsed_time = end_time - start_time
+print("Time: ", elapsed_time)
 
-print(generated_text)
+generated_ids = [
+    output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
+]
 
+response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+print(response)
 
+nvmem.clearMemory()
+nvmem.printMemoryUsed()
 
