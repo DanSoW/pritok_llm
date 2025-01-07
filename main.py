@@ -1,18 +1,30 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 import nvmem
-import gc
-import sys
+import sys, os, gc
 import time
+
+# Загрузка промпт-запроса
+dir_path = os.path.abspath(os.path.dirname(__file__))
+filename_prompt = 'prompt_2.txt'
+
+settings = {
+    "filepath": dir_path + os.path.sep + filename_prompt,
+    "mode": "r"
+}
+
+prompt = ""
+with open(settings["filepath"], settings["mode"]) as f:
+    prompt = f.read()
 
 torch.cuda.empty_cache()
 
 nvmem.printInfoCUDA()
 nvmem.printMemoryUsed()
 
-#model_name = "microsoft/Phi-3-mini-4k-instruct"
+model_name = "microsoft/Phi-3-mini-4k-instruct"
 #model_name = "ai-forever/rugpt3small_based_on_gpt2"
-model_name = "Qwen/Qwen2.5-Coder-3B"
+#model_name = "Qwen/Qwen2.5-Coder-3B"
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Device: ", device)
@@ -22,7 +34,6 @@ model = AutoModelForCausalLM.from_pretrained(model_name, device_map=device).eval
 
 nvmem.printMemoryUsed()
 
-prompt = "Напиши реализацию прямого обхода двусвязного списка на C++"
 messages = [
     {"role": "user", "content": prompt}
 ]
