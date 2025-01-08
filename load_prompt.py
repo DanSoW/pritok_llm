@@ -2,7 +2,7 @@ import sys, os
 
 prompt = ""
 dir_path = os.path.abspath(os.path.dirname(__file__))
-filename_prompt = "prompt_2.txt"
+filename_prompt = "prompt_1.txt"
 
 settings = {
     "filepath": dir_path + os.path.sep + filename_prompt,

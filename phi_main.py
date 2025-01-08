@@ -23,7 +23,6 @@ MESSAGES="""<|system|>
 """
 
 #print(torch.nn.attention.SDPBackend.FLASH_ATTENTION)
-
 attention = "eager"
 # attention = "flash_attention_2"
 
@@ -53,10 +52,8 @@ class Predictor(BasePredictor):
         # Создание токенизатора
         self.tokenizer = AutoTokenizer.from_pretrained(MODEL_CACHE)
 
-    def predict(self) -> ConcatenateIterator[str]:
-        tokens = ["The", "quick", "brown"]
-        for token in tokens:
-            yield token + " "
+    def predict(self) -> None:
+        return None
 
     def predict2(self, prompt: str, max_length: int = 2048, temperature: float = 0.1, top_p: float = 1.0, top_k: int = 1, 
                  repetition_penalty: float = 1.1, system_prompt: str = "You are a helpful AI assistant", seed: int = 100): #-> ConcatenateIterator[str]:
@@ -87,28 +84,34 @@ class Predictor(BasePredictor):
             do_sample=True
         )
 
-        self.model.generate(generation_kwargs)
+        #generated_ids = self.model.generate(**generation_kwargs)
 
-        #print("start thread")
-        #thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
-        #thread.start()
+        print("start thread")
+        thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
+        
+        start_time = time.time()
+        thread.start()
+
+        response = ""
+        for new_text in streamer:
+            response += new_text
 
         #for _, new_text in enumerate(streamer):
             #print(new_text)
             #yield new_text
 
-        #print("joining thread")
-        #thread.join()
-        #print("close thread")
+        thread.join()
+        end_time = time.time()
+
+        elapsed_time = end_time - start_time
+        print("Time: ", elapsed_time)
+        print(response)
 
 
 msg = get_prompt()
 print("Prompt: ", msg)
 
 predictor = Predictor()
-print("to setup")
 predictor.setup()
-
-print("to predict")
 predictor.predict2(msg)
 
