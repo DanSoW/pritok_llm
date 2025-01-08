@@ -22,6 +22,11 @@ MESSAGES="""<|system|>
 <|assistant|>
 """
 
+#print(torch.nn.attention.SDPBackend.FLASH_ATTENTION)
+
+attention = "eager"
+# attention = "flash_attention_2"
+
 def download_weights(url, dest):
     start = time.time()
 
@@ -42,23 +47,27 @@ class Predictor(BasePredictor):
         # Загрузка модели по пути
         self.model = AutoModelForCausalLM.from_pretrained(
                 MODEL_CACHE, trust_remote_code=True,
-                torch_dtype=torch.float16, attn_implementation="flash_attention_2",
-        ).to(self.device)
+                torch_dtype=torch.float16, device_map=self.device, attn_implementation=attention,
+        )
 
         # Создание токенизатора
         self.tokenizer = AutoTokenizer.from_pretrained(MODEL_CACHE)
 
-    def predict(self, prompt: str, max_length: int = 2048, top_p: float = 1.0, top_k: int = 1, 
-                repetition_penalty: float = 1.1, system_prompt: str = "You are a helpful AI assistant",
-                seed: int = 100) -> ConcatenateIterator[str]:
+    def predict(self) -> ConcatenateIterator[str]:
+        tokens = ["The", "quick", "brown"]
+        for token in tokens:
+            yield token + " "
 
+    def predict2(self, prompt: str, max_length: int = 2048, temperature: float = 0.1, top_p: float = 1.0, top_k: int = 1, 
+                 repetition_penalty: float = 1.1, system_prompt: str = "You are a helpful AI assistant", seed: int = 100): #-> ConcatenateIterator[str]:
+        print("predict start")
         # Запуск одиночной генерации
         if seed is None:
             seed = torch.randint(0, 100000, (1,)).item()
 
         torch.random.manual_seed(seed)
 
-        # Определение формата сообщения
+        #0 Определение формата сообщения
         chat_format = MESSAGES.format(sys_prompt=system_prompt, user_prompt=prompt)
         tokens = self.tokenizer(chat_format, return_tensors="pt")
         streamer = TextIteratorStreamer(self.tokenizer, skip_prompt=True, remove_start_token=True)
@@ -78,22 +87,28 @@ class Predictor(BasePredictor):
             do_sample=True
         )
 
-        thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
-        thread.start()
+        self.model.generate(generation_kwargs)
 
-        for _, new_text in enumerate(streamer):
-            print(new_text)
-            yield new_text
+        #print("start thread")
+        #thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
+        #thread.start()
 
-        thread.join()
+        #for _, new_text in enumerate(streamer):
+            #print(new_text)
+            #yield new_text
+
+        #print("joining thread")
+        #thread.join()
+        #print("close thread")
 
 
-predictor = Predictor()
 msg = get_prompt()
-
 print("Prompt: ", msg)
 
+predictor = Predictor()
+print("to setup")
 predictor.setup()
-predictor.predict(msg)
 
+print("to predict")
+predictor.predict2(msg)
 
