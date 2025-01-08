@@ -6,7 +6,7 @@ import time
 
 # Загрузка промпт-запроса
 dir_path = os.path.abspath(os.path.dirname(__file__))
-filename_prompt = 'prompt_2.txt'
+filename_prompt = 'prompt_3.txt'
 
 settings = {
     "filepath": dir_path + os.path.sep + filename_prompt,
@@ -24,7 +24,8 @@ nvmem.printMemoryUsed()
 
 #model_name = "microsoft/Phi-3-mini-4k-instruct"
 #model_name = "ai-forever/rugpt3small_based_on_gpt2"
-model_name = "Qwen/Qwen2.5-Coder-3B"
+#model_name = "Qwen/Qwen2.5-Coder-3B"
+model_name = "Qwen/Qwen2.5-Coder-3B-Instruct"
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Device: ", device)

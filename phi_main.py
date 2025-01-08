@@ -1,5 +1,3 @@
-import cog
-from cog import BasePredictor, Input, ConcatenateIterator
 import os
 import time
 import torch
@@ -35,7 +33,7 @@ def download_weights(url, dest):
     subprocess.check_call(["pget", "-x", url, dest], close_fds=False)
     print("downloading took: ", time.time() - start)
 
-class Predictor(BasePredictor):
+class Predictor:
     def setup(self) -> None:
         # Загрузка модели в память
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -52,11 +50,8 @@ class Predictor(BasePredictor):
         # Создание токенизатора
         self.tokenizer = AutoTokenizer.from_pretrained(MODEL_CACHE)
 
-    def predict(self) -> None:
-        return None
-
-    def predict2(self, prompt: str, max_length: int = 2048, temperature: float = 0.1, top_p: float = 1.0, top_k: int = 1, 
-                 repetition_penalty: float = 1.1, system_prompt: str = "You are a helpful AI assistant", seed: int = 100): #-> ConcatenateIterator[str]:
+    def predict(self, prompt: str, max_length: int = 2048, temperature: float = 0.1, top_p: float = 1.0, top_k: int = 1, 
+                 repetition_penalty: float = 1.1, system_prompt: str = "You are a helpful AI assistant", seed: int = 100):
         print("predict start")
         # Запуск одиночной генерации
         if seed is None:
@@ -96,10 +91,6 @@ class Predictor(BasePredictor):
         for new_text in streamer:
             response += new_text
 
-        #for _, new_text in enumerate(streamer):
-            #print(new_text)
-            #yield new_text
-
         thread.join()
         end_time = time.time()
 
@@ -113,5 +104,5 @@ print("Prompt: ", msg)
 
 predictor = Predictor()
 predictor.setup()
-predictor.predict2(msg)
+predictor.predict(msg)
 
