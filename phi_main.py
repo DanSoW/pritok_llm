@@ -82,13 +82,18 @@ class Predictor(BasePredictor):
         thread.start()
 
         for _, new_text in enumerate(streamer):
+            print(new_text)
             yield new_text
 
         thread.join()
 
 
 predictor = Predictor()
-print(get_prompt())
+msg = get_prompt()
 
+print("Prompt: ", msg)
+
+predictor.setup()
+predictor.predict(msg)
 
 
