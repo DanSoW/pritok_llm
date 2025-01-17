@@ -1,73 +1,122 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import torch
-import nvmem
-import sys, os, gc
+import os
 import time
+import torch
+import subprocess
+from threading import Thread
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers.generation import TextIteratorStreamer
+from load_prompt import get_prompt
+
+#MODEL_NAME = "/home/phi_model"
+MODEL_NAME = "Qwen/Qwen2.5-Coder-3B-Instruct"
+#MODEL_NAME = "microsoft/Phi-3-mini-4k-instruct"
 
 # Загрузка промпт-запроса
-dir_path = os.path.abspath(os.path.dirname(__file__))
-filename_prompt = 'prompt_3.txt'
+prompt_global = get_prompt()
 
-settings = {
-    "filepath": dir_path + os.path.sep + filename_prompt,
-    "mode": "r"
-}
+def download_weights(url, dest):
+    start = time.time()
 
-prompt = ""
-with open(settings["filepath"], settings["mode"]) as f:
-    prompt = f.read()
+    print("downloading url: ", url)
+    print("downloading to: ", dest)
 
-torch.cuda.empty_cache()
+    subprocess.check_call(["pget", "-x", url, dest], close_fds=False)
+    print("downloading took: ", time.time() - start)
 
-nvmem.printInfoCUDA()
-nvmem.printMemoryUsed()
+# Класс для использования LLM моделей
+class Predictor(object):
+    __slots__ = ["model", "tokenizer",  "device", 
+                 "max_length", "temperature", "top_p", 
+                 "top_k", "repetition_penalty", "system_prompt", 
+                 "seed"]
 
-#model_name = "microsoft/Phi-3-mini-4k-instruct"
-#model_name = "ai-forever/rugpt3small_based_on_gpt2"
-#model_name = "Qwen/Qwen2.5-Coder-3B"
-model_name = "Qwen/Qwen2.5-Coder-3B-Instruct"
+    def __init__(self, max_length: int = 10240, temperature: float = 0.1, top_p: float = 1.0,
+                 top_k: float = 1, repetition_penalty: float = 1.1, system_prompt: str = "You are a helpful AI assistant",
+                 seed: int = 100):
+        
+        super().__init__()
+        
+        self.max_length = max_length
+        self.temperature = temperature
+        self.top_p = top_p
+        self.top_k = top_k
+        self.repetition_penalty = repetition_penalty
+        self.system_prompt = system_prompt
+        self.seed = seed
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print("Device: ", device)
 
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(model_name, device_map=device).eval()
+    def setup(self) -> None:
+        # Загрузка модели в память
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-nvmem.printMemoryUsed()
+        #if not os.path.exists(MODEL_CACHE):
+           # download_weights(MODEL_URL, MODEL_CACHE)
 
-messages = [
-    {"role": "user", "content": prompt}
-]
+        # Создание модели
+        self.model = AutoModelForCausalLM.from_pretrained(
+                MODEL_NAME, trust_remote_code=True,
+                torch_dtype=torch.float16, device_map=self.device
+        )
 
-text = tokenizer.apply_chat_template(
-        messages, 
-        tokenize=False, 
-        add_generation_prompt=True
-)
+        # Создание токенизатора
+        self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
-model_inputs = tokenizer([text], return_tensors="pt").to(device)
+    def predict(self, prompt: str):
+        if self.seed is None:
+            seed = torch.randint(0, 100000, (1,)).item()
 
-nvmem.printMemoryUsed()
+        torch.random.manual_seed(self.seed)
 
-start_time = time.time()
-generated_ids = model.generate(
-        model_inputs.input_ids,
-        max_new_tokens=2048
-)
-end_time = time.time()
+        messages = [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": prompt}
+        ]
 
-print("LEN RESPONSE: ", len(generated_ids))
+        chat_format = self.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True
+        )
 
-elapsed_time = end_time - start_time
-print("Time: ", elapsed_time)
+        tokens = self.tokenizer(chat_format, return_tensors="pt")
+        streamer = TextIteratorStreamer(self.tokenizer, skip_prompt=True, remove_start_token=True)
 
-generated_ids = [
-    output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
-]
+        input_ids = tokens.input_ids.to(device=self.device)
+        max_length = input_ids.shape[1] + self.max_length
 
-response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
-print(response)
+        generation_kwargs = dict(
+            input_ids=input_ids,
+            max_length=self.max_length,
+            return_dict_in_generate=True,
+            temperature=self.temperature,
+            top_k=self.top_k,
+            top_p=self.top_p,
+            repetition_penalty=self.repetition_penalty,
+            streamer=streamer,
+            do_sample=True
+        )
 
-nvmem.clearMemory()
-nvmem.printMemoryUsed()
+        thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
+
+        start_time = time.time()
+        thread.start()
+        thread.join()
+
+        response = ""
+        for new_text in streamer:
+            response += new_text
+        
+        end_time = time.time()
+
+        elapsed_time = end_time - start_time
+        print("Time: ", elapsed_time)
+        print(response)
+
+
+        
+predictor = Predictor()
+predictor.setup()
+predictor.predict(prompt_global)
+
+
 

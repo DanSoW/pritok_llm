@@ -20,6 +20,9 @@ MESSAGES="""<|system|>
 <|assistant|>
 """
 
+print("MODEL_NAME: ", MODEL_NAME)
+print("MODEL_CACHE: ", MODEL_CACHE)
+
 #print(torch.nn.attention.SDPBackend.FLASH_ATTENTION)
 attention = "eager"
 # attention = "flash_attention_2"
@@ -86,12 +89,12 @@ class Predictor:
         
         start_time = time.time()
         thread.start()
-
+        thread.join()
         response = ""
         for new_text in streamer:
             response += new_text
 
-        thread.join()
+        #thread.join()
         end_time = time.time()
 
         elapsed_time = end_time - start_time
