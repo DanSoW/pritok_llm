@@ -14,6 +14,7 @@ MODEL_NAME = "Qwen/Qwen2.5-Coder-3B-Instruct"
 # Загрузка промпт-запроса
 prompt_global = get_prompt()
 
+# Загрузка весов модели локально по URL
 def download_weights(url, dest):
     start = time.time()
 
@@ -25,11 +26,13 @@ def download_weights(url, dest):
 
 # Класс для использования LLM моделей
 class Predictor(object):
+    # Определение слота для хранения определённых атрибутов класса
     __slots__ = ["model", "tokenizer",  "device", 
                  "max_length", "temperature", "top_p", 
                  "top_k", "repetition_penalty", "system_prompt", 
                  "seed"]
 
+    # Конструктор класса
     def __init__(self, max_length: int = 10240, temperature: float = 0.1, top_p: float = 1.0,
                  top_k: float = 1, repetition_penalty: float = 1.1, system_prompt: str = "You are a helpful AI assistant",
                  seed: int = 100):
@@ -45,6 +48,7 @@ class Predictor(object):
         self.seed = seed
 
 
+    # Метод предварительной настройки объекта класса
     def setup(self) -> None:
         # Загрузка модели в память
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -61,29 +65,38 @@ class Predictor(object):
         # Создание токенизатора
         self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
+    # Метод для запуска LLM модели в отдельном потоке и ожидание получения сообщения
     def predict(self, prompt: str):
         if self.seed is None:
             seed = torch.randint(0, 100000, (1,)).item()
 
         torch.random.manual_seed(self.seed)
 
+        # Сообщения для встраивания
         messages = [
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": prompt}
         ]
 
+        # Встраивание сообщений в шаблон, который определён моделью
         chat_format = self.tokenizer.apply_chat_template(
                 messages,
                 tokenize=False,
                 add_generation_prompt=True
         )
 
+
+        # Токенизация сообщения
         tokens = self.tokenizer(chat_format, return_tensors="pt")
+        # Определение потока для чтения сформированных LLM сообщений
         streamer = TextIteratorStreamer(self.tokenizer, skip_prompt=True, remove_start_token=True)
 
+        # Получение входных данных, которые размещены в GPU
         input_ids = tokens.input_ids.to(device=self.device)
+        # Определение максимальной длины ответа LLM
         max_length = input_ids.shape[1] + self.max_length
 
+        # Определение словаря параметров для передачи функции generate
         generation_kwargs = dict(
             input_ids=input_ids,
             max_length=self.max_length,
@@ -96,9 +109,11 @@ class Predictor(object):
             do_sample=True
         )
 
+        # Определение объекта для запуска потока
         thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
 
         start_time = time.time()
+
         thread.start()
         thread.join()
 
