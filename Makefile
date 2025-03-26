@@ -7,4 +7,10 @@ run-phi:
 git-push:
 	git push origin main
 
+run-install-packages:
+	pip install -r requirements.txt
+
+run-freeze-packages:
+	pip freeze > requirements.txt
+
 
