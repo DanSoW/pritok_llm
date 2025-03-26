@@ -1,4 +1,11 @@
 #!/bin/bash
+
+activate () {
+ . ./.venv/bin/activate	
+}
+
+activate
+
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 DIR=`pwd`
 
@@ -17,7 +24,7 @@ pretrain_ckpt=default_path
 save_path=default_path
 
 # 使用getopts解析命名参数
-while [[ "$#" -gt 0 ]]; do
+while [ "$#" -gt 0 ]; do
     case $1 in
         --save-name) SAVE_NAME="$2"; shift ;;
         --max-length) max_length="$2"; shift ;;
