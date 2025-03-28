@@ -5,7 +5,7 @@ import torch
 modelName = "Qwen/Qwen2.5-VL-3B-Instruct"
 
 model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-    modelName, torch_dtype=torch.bfloat16, device_map="auto"
+    modelName, torch_dtype=torch.float16, attn_implementation="flash_attention_2", device_map="auto"
 )
 
 processor = AutoProcessor.from_pretrained(modelName)
@@ -16,9 +16,9 @@ messages = [
         "content": [
             {
                 "type": "image",
-                "image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+                "image": "/home/test_img.png",
             },
-            {"type": "text", "text": "Describe this image."},
+            {"type": "text", "text": "Определи координаты значка захабренный, кнопку для перехода в раздел новости и кнопку показать. Ответ представь в формате (x; y) для каждого элемента веб-страницы"},
         ],
     }
 ]
