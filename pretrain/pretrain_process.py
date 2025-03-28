@@ -167,7 +167,7 @@ sft_train = web_loca_point + web_loca_bbox + web_ocr_point + web_ocr_bbox
 
 print("Num of sft: " + str(len(sft_train)))
 
-with open("../data/sft_train.json", "w") as json_file:
+with open("/home/pritok_llm/data/sft_train.json", "w") as json_file:
     json.dump(sft_train, json_file)
 
 
