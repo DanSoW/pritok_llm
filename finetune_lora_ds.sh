@@ -67,7 +67,7 @@ torchrun $DISTRIBUTED_ARGS finetune/finetune.py \
     --model_name_or_path $MODEL \
     --qwen_path $QWEN_PATH \
     --data_path $DATA \
-    --bf16 True \
+    --bf16 False \
     --fix_vit False \
     --output_dir $SAVE_PATH \
     --num_train_epochs ${train_epochs} \
