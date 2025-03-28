@@ -19,8 +19,8 @@ learning_rate=1e-5
 gradient_accumulation_steps=1
 nproc_per_node=1
 data_path=/home/pritok_llm/data/sft_train.json
-qwen_ckpt=/home/pritok_llm/model_data
-pretrain_ckpt=/home/pritok_llm/model_data
+qwen_ckpt=Qwen/Qwen2.5-Coder-3B-Instruct
+pretrain_ckpt=Qwen/Qwen2.5-Coder-3B-Instruct
 save_path=/home/pritok_llm/model_data
 
 # 使用getopts解析命名参数
