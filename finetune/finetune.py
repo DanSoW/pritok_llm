@@ -241,8 +241,12 @@ def make_supervised_data_module(
     )
     rank0_print("Loading data...")
 
+    print("LOADING DATASET")
+
     train_json = json.load(open(data_args.data_path, "r"))
     train_dataset = dataset_cls(train_json, tokenizer=tokenizer, max_len=max_len)
+
+    print(data_args.eval_data_path)
 
     if data_args.eval_data_path:
         eval_json = json.load(open(data_args.eval_data_path, "r"))
@@ -259,12 +263,13 @@ def train():
     parser = transformers.HfArgumentParser(
         (ModelArguments, DataArguments, TrainingArguments, LoraArguments)
     )
+
     (
         model_args,
         data_args,
         training_args,
         lora_args,
-    ) = parser.parse_args_into_dataclasses()
+    ) = parser.parse_args_into_dataclasses() 
 
     if getattr(training_args, 'deepspeed', None) and getattr(lora_args, 'q_lora', False):
         training_args.distributed_state.distributed_type = DistributedType.DEEPSPEED
@@ -287,13 +292,20 @@ def train():
                 "FSDP or ZeRO3 are not incompatible with QLoRA."
             )
 
+    print("STEP 1")
+    print(model_args.model_name_or_path)
+    print(training_args.cache_dir)
+
     # Set RoPE scaling factor
     config = transformers.AutoConfig.from_pretrained(
         model_args.model_name_or_path,
         cache_dir=training_args.cache_dir,
         trust_remote_code=True,
     )
+
     config.use_cache = False
+
+    print("STEP 2")
 
     # Load model and tokenizer
     model = transformers.AutoModelForCausalLM.from_pretrained(
@@ -386,6 +398,7 @@ def train():
 
 
 if __name__ == "__main__":
+    print("Execute train")
     train()
 
 

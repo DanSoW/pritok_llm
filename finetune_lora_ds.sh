@@ -18,10 +18,10 @@ train_epochs=10
 learning_rate=1e-5
 gradient_accumulation_steps=1
 nproc_per_node=1
-data_path=/home/pritok_llm/dataset/cpfs01/user/chengkanzhi/seeclick_web_imgs
-qwen_ckpt=default_path
-pretrain_ckpt=default_path
-save_path=default_path
+data_path=/home/pritok_llm/data/sft_train.json
+qwen_ckpt=/home/pritok_llm/model_data
+pretrain_ckpt=/home/pritok_llm/model_data
+save_path=/home/pritok_llm/model_data
 
 # 使用getopts解析命名参数
 while [ "$#" -gt 0 ]; do
@@ -89,7 +89,7 @@ torchrun $DISTRIBUTED_ARGS finetune/finetune.py \
     --lazy_preprocess True \
     --use_lora \
     --gradient_checkpointing \
-    --deepspeed finetune/ds_config_zero2.json
+    --deepspeed /home/pritok_llm/ds_config_zero2.json
 
 
 
